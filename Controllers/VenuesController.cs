@@ -7,16 +7,19 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using EventEase.Data;
 using EventEase.Models;
+using EventEase.Services;
 
 namespace EventEase.Controllers
 {
     public class VenuesController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly BlobStorageService _blobStorageService;
 
-        public VenuesController(ApplicationDbContext context)
+        public VenuesController(ApplicationDbContext context, BlobStorageService blobStorageService)
         {
             _context = context;
+            _blobStorageService = blobStorageService;
         }
 
         // GET: Venues
@@ -50,14 +53,25 @@ namespace EventEase.Controllers
         }
 
         // POST: Venues/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("VenueId,VenueName,Location,Capacity,ImageUrl")] Venue venue)
+        public async Task<IActionResult> Create([Bind("VenueId,VenueName,Location,Capacity")] Venue venue)
         {
             if (ModelState.IsValid)
             {
+                // Handle image upload
+                if (Request.Form.Files.Count > 0)
+                {
+                    var file = Request.Form.Files[0];
+                    if (file.Length > 0)
+                    {
+                        using (var stream = file.OpenReadStream())
+                        {
+                            venue.ImageUrl = await _blobStorageService.UploadImageAsync(stream, file.FileName);
+                        }
+                    }
+                }
+
                 _context.Add(venue);
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
@@ -82,11 +96,9 @@ namespace EventEase.Controllers
         }
 
         // POST: Venues/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("VenueId,VenueName,Location,Capacity,ImageUrl")] Venue venue)
+        public async Task<IActionResult> Edit(int id, [Bind("VenueId,VenueName,Location,Capacity")] Venue venue)
         {
             if (id != venue.VenueId)
             {
@@ -95,6 +107,19 @@ namespace EventEase.Controllers
 
             if (ModelState.IsValid)
             {
+                // Handle image upload
+                if (Request.Form.Files.Count > 0)
+                {
+                    var file = Request.Form.Files[0];
+                    if (file.Length > 0)
+                    {
+                        using (var stream = file.OpenReadStream())
+                        {
+                            venue.ImageUrl = await _blobStorageService.UploadImageAsync(stream, file.FileName);
+                        }
+                    }
+                }
+
                 try
                 {
                     _context.Update(venue);
@@ -140,11 +165,20 @@ namespace EventEase.Controllers
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             var venue = await _context.Venues.FindAsync(id);
-            if (venue != null)
+            if (venue == null)
             {
-                _context.Venues.Remove(venue);
+                return NotFound();
             }
 
+            // Check if venue has active bookings
+            bool hasBookings = await _context.Bookings.AnyAsync(b => b.VenueId == id);
+            if (hasBookings)
+            {
+                TempData["ErrorMessage"] = "Cannot delete this venue because it has active bookings. Please delete the bookings first.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            _context.Venues.Remove(venue);
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
