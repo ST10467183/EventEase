@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using EventEase.Data;
 using EventEase.Models;
@@ -56,13 +57,14 @@ namespace EventEase.Controllers
         // create form
         public IActionResult Create()
         {
+            ViewData["EventTypeId"] = new SelectList(_context.EventTypes, "EventTypeId", "TypeName");
             return View();
         }
 
         // create logic
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("EventId,EventName,Description,StartDate,EndDate")] Event @event)
+        public async Task<IActionResult> Create([Bind("EventId,EventName,Description,StartDate,EndDate,EventTypeId")] Event @event)
         {
             if (ModelState.IsValid)
             {
@@ -90,6 +92,8 @@ namespace EventEase.Controllers
                     TempData["ErrorMessage"] = "Unable to create event. Please check your input and try again.";
                 }
             }
+
+            ViewData["EventTypeId"] = new SelectList(_context.EventTypes, "EventTypeId", "TypeName", @event.EventTypeId);
             return View(@event);
         }
 
@@ -106,13 +110,15 @@ namespace EventEase.Controllers
             {
                 return NotFound();
             }
+
+            ViewData["EventTypeId"] = new SelectList(_context.EventTypes, "EventTypeId", "TypeName", @event.EventTypeId);
             return View(@event);
         }
 
         // edit logic
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("EventId,EventName,Description,StartDate,EndDate")] Event @event)
+        public async Task<IActionResult> Edit(int id, [Bind("EventId,EventName,Description,StartDate,EndDate,EventTypeId")] Event @event)
         {
             if (id != @event.EventId)
             {
@@ -121,17 +127,20 @@ namespace EventEase.Controllers
 
             if (ModelState.IsValid)
             {
-                // handle new image
-                if (Request.Form.Files.Count > 0)
+                // keep old image if no new one uploaded
+                var existingEvent = await _context.Events.AsNoTracking().FirstOrDefaultAsync(e => e.EventId == @event.EventId);
+
+                if (Request.Form.Files.Count > 0 && Request.Form.Files[0].Length > 0)
                 {
                     var file = Request.Form.Files[0];
-                    if (file.Length > 0)
+                    using (var stream = file.OpenReadStream())
                     {
-                        using (var stream = file.OpenReadStream())
-                        {
-                            @event.ImageUrl = await _blobStorageService.UploadImageAsync(stream, file.FileName);
-                        }
+                        @event.ImageUrl = await _blobStorageService.UploadImageAsync(stream, file.FileName);
                     }
+                }
+                else
+                {
+                    @event.ImageUrl = existingEvent?.ImageUrl;
                 }
 
                 try
@@ -157,6 +166,8 @@ namespace EventEase.Controllers
                 }
                 return RedirectToAction(nameof(Index));
             }
+
+            ViewData["EventTypeId"] = new SelectList(_context.EventTypes, "EventTypeId", "TypeName", @event.EventTypeId);
             return View(@event);
         }
 

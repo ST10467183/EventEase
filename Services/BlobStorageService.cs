@@ -21,7 +21,7 @@ namespace EventEase.Services
         {
             BlobServiceClient blobServiceClient = new BlobServiceClient(_connectionString);
             BlobContainerClient containerClient = blobServiceClient.GetBlobContainerClient(ContainerName);
-            await containerClient.CreateIfNotExistsAsync(PublicAccessType.Blob);
+            await containerClient.CreateIfNotExistsAsync();
 
             string uniqueFileName = Guid.NewGuid().ToString() + "_" + fileName;
             BlobClient blobClient = containerClient.GetBlobClient(uniqueFileName);
@@ -43,6 +43,7 @@ namespace EventEase.Services
             BlobClient blobClient = containerClient.GetBlobClient(blobName);
             await blobClient.DeleteIfExistsAsync();
         }
+
         public async Task<(Stream? fileStream, string? contentType)> GetImageAsync(string imageUrl)
         {
             if (string.IsNullOrEmpty(imageUrl))

@@ -7,10 +7,29 @@
 <h1>Bookings</h1>
 
 <form asp-action="Index" method="get" class="mb-3">
-    <div class="input-group">
-        <input type="text" name="searchString" class="form-control" placeholder="Search by Booking ID or Event Name..." value="@ViewData["CurrentFilter"]" />
-        <button type="submit" class="btn btn-primary">Search</button>
-        <a asp-action="Index" class="btn btn-secondary">Clear</a>
+    <div class="row g-2">
+        <div class="col-md-3">
+            <input type="text" name="searchString" class="form-control" placeholder="Booking ID or Event Name..." value="@ViewData["CurrentSearch"]" />
+        </div>
+        <div class="col-md-2">
+            <select name="eventTypeId" class="form-control" asp-items="ViewBag.EventTypeId">
+                <option value="">All Types</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <select name="venueId" class="form-control" asp-items="ViewBag.VenueId">
+                <option value="">All Venues</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <input type="date" name="startDate" class="form-control" value="@ViewData["CurrentStartDate"]" />
+        </div>
+        <div class="col-md-2">
+            <input type="date" name="endDate" class="form-control" value="@ViewData["CurrentEndDate"]" />
+        </div>
+        <div class="col-md-1">
+            <button type="submit" class="btn btn-primary w-100">Filter</button>
+        </div>
     </div>
 </form>
 

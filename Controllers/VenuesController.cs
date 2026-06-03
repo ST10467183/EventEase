@@ -22,7 +22,6 @@ namespace EventEase.Controllers
             _blobStorageService = blobStorageService;
         }
 
-        // shows all venues (with search)
         public async Task<IActionResult> Index(string searchString)
         {
             var venues = _context.Venues.AsQueryable();
@@ -36,38 +35,25 @@ namespace EventEase.Controllers
             return View(await venues.ToListAsync());
         }
 
-        // details page
         public async Task<IActionResult> Details(int? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var venue = await _context.Venues
-                .FirstOrDefaultAsync(m => m.VenueId == id);
-            if (venue == null)
-            {
-                return NotFound();
-            }
-
+            if (id == null) return NotFound();
+            var venue = await _context.Venues.FirstOrDefaultAsync(m => m.VenueId == id);
+            if (venue == null) return NotFound();
             return View(venue);
         }
 
-        // create form
         public IActionResult Create()
         {
             return View();
         }
 
-        // create logic
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("VenueId,VenueName,Location,Capacity")] Venue venue)
         {
             if (ModelState.IsValid)
             {
-                // upload image if there is one
                 if (Request.Form.Files.Count > 0)
                 {
                     var file = Request.Form.Files[0];
@@ -88,51 +74,41 @@ namespace EventEase.Controllers
                 }
                 catch (DbUpdateException)
                 {
-                    TempData["ErrorMessage"] = "Unable to create venue. Please check your input and try again.";
+                    TempData["ErrorMessage"] = "Unable to create venue.";
                 }
             }
             return View(venue);
         }
 
-        // edit form
         public async Task<IActionResult> Edit(int? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
+            if (id == null) return NotFound();
             var venue = await _context.Venues.FindAsync(id);
-            if (venue == null)
-            {
-                return NotFound();
-            }
+            if (venue == null) return NotFound();
             return View(venue);
         }
 
-        // edit logic
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, [Bind("VenueId,VenueName,Location,Capacity")] Venue venue)
         {
-            if (id != venue.VenueId)
-            {
-                return NotFound();
-            }
+            if (id != venue.VenueId) return NotFound();
 
             if (ModelState.IsValid)
             {
-                // handle new image
-                if (Request.Form.Files.Count > 0)
+                var existingVenue = await _context.Venues.AsNoTracking().FirstOrDefaultAsync(v => v.VenueId == venue.VenueId);
+
+                if (Request.Form.Files.Count > 0 && Request.Form.Files[0].Length > 0)
                 {
                     var file = Request.Form.Files[0];
-                    if (file.Length > 0)
+                    using (var stream = file.OpenReadStream())
                     {
-                        using (var stream = file.OpenReadStream())
-                        {
-                            venue.ImageUrl = await _blobStorageService.UploadImageAsync(stream, file.FileName);
-                        }
+                        venue.ImageUrl = await _blobStorageService.UploadImageAsync(stream, file.FileName);
                     }
+                }
+                else
+                {
+                    venue.ImageUrl = existingVenue?.ImageUrl;
                 }
 
                 try
@@ -142,18 +118,12 @@ namespace EventEase.Controllers
                 }
                 catch (DbUpdateConcurrencyException)
                 {
-                    if (!VenueExists(venue.VenueId))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
+                    if (!VenueExists(venue.VenueId)) return NotFound();
+                    else throw;
                 }
                 catch (DbUpdateException)
                 {
-                    TempData["ErrorMessage"] = "Unable to save changes. Please try again.";
+                    TempData["ErrorMessage"] = "Unable to save changes.";
                     return RedirectToAction(nameof(Index));
                 }
                 return RedirectToAction(nameof(Index));
@@ -161,40 +131,25 @@ namespace EventEase.Controllers
             return View(venue);
         }
 
-        // delete page
         public async Task<IActionResult> Delete(int? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var venue = await _context.Venues
-                .FirstOrDefaultAsync(m => m.VenueId == id);
-            if (venue == null)
-            {
-                return NotFound();
-            }
-
+            if (id == null) return NotFound();
+            var venue = await _context.Venues.FirstOrDefaultAsync(m => m.VenueId == id);
+            if (venue == null) return NotFound();
             return View(venue);
         }
 
-        // delete logic
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             var venue = await _context.Venues.FindAsync(id);
-            if (venue == null)
-            {
-                return NotFound();
-            }
+            if (venue == null) return NotFound();
 
-            // can't delete if there's bookings
             bool hasBookings = await _context.Bookings.AnyAsync(b => b.VenueId == id);
             if (hasBookings)
             {
-                TempData["ErrorMessage"] = "Cannot delete this venue because it has active bookings. Please delete the bookings first.";
+                TempData["ErrorMessage"] = "Cannot delete this venue because it has active bookings.";
                 return RedirectToAction(nameof(Index));
             }
 
@@ -205,20 +160,16 @@ namespace EventEase.Controllers
             }
             catch (DbUpdateException)
             {
-                TempData["ErrorMessage"] = "Unable to delete the venue. Please try again later.";
+                TempData["ErrorMessage"] = "Unable to delete the venue.";
             }
 
             return RedirectToAction(nameof(Index));
         }
 
-        // shows image from blob storage
         public async Task<IActionResult> VenueImage(string imageUrl)
         {
             var (stream, contentType) = await _blobStorageService.GetImageAsync(imageUrl);
-
-            if (stream == null)
-                return NotFound();
-
+            if (stream == null) return NotFound();
             return File(stream, contentType ?? "image/jpeg");
         }
 

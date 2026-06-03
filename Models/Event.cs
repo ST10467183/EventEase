@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace EventEase.Models
 {
@@ -6,6 +7,12 @@ namespace EventEase.Models
     {
         [Key]
         public int EventId { get; set; }
+
+        [Display(Name = "Event Type")]
+        public int? EventTypeId { get; set; }
+
+        [ForeignKey("EventTypeId")]
+        public EventType? EventType { get; set; }
 
         [Required(ErrorMessage = "Event name is required")]
         [Display(Name = "Event Name")]
