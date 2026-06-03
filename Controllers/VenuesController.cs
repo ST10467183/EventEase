@@ -22,10 +22,18 @@ namespace EventEase.Controllers
             _blobStorageService = blobStorageService;
         }
 
-        // shows all venues
-        public async Task<IActionResult> Index()
+        // shows all venues (with search)
+        public async Task<IActionResult> Index(string searchString)
         {
-            return View(await _context.Venues.ToListAsync());
+            var venues = _context.Venues.AsQueryable();
+
+            if (!string.IsNullOrEmpty(searchString))
+            {
+                venues = venues.Where(v => v.VenueName.Contains(searchString)
+                                         || v.Location.Contains(searchString));
+            }
+
+            return View(await venues.ToListAsync());
         }
 
         // details page

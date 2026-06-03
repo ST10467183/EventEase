@@ -10,6 +10,14 @@
     <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
 }
 
+<form asp-action="Index" method="get" class="mb-3">
+    <div class="input-group">
+        <input type="text" name="searchString" class="form-control" placeholder="Search by event name or description..." />
+        <button type="submit" class="btn btn-primary">Search</button>
+        <a asp-action="Index" class="btn btn-secondary">Clear</a>
+    </div>
+</form>
+
 <p>
     <a asp-action="Create">Create New</a>
 </p>

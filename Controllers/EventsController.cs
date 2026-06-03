@@ -21,10 +21,18 @@ namespace EventEase.Controllers
             _blobStorageService = blobStorageService;
         }
 
-        // show all events
-        public async Task<IActionResult> Index()
+        // show all events (with search)
+        public async Task<IActionResult> Index(string searchString)
         {
-            return View(await _context.Events.ToListAsync());
+            var events = _context.Events.AsQueryable();
+
+            if (!string.IsNullOrEmpty(searchString))
+            {
+                events = events.Where(e => e.EventName.Contains(searchString)
+                                         || e.Description.Contains(searchString));
+            }
+
+            return View(await events.ToListAsync());
         }
 
         // event details
