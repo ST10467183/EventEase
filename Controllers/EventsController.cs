@@ -1,16 +1,8 @@
-﻿using Azure.Core;
-using EventEase.Data;
-using EventEase.Models;
-using EventEase.Services;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using EventEase.Data;
 using EventEase.Models;
@@ -29,13 +21,13 @@ namespace EventEase.Controllers
             _blobStorageService = blobStorageService;
         }
 
-        // GET: Events
+        // show all events
         public async Task<IActionResult> Index()
         {
             return View(await _context.Events.ToListAsync());
         }
 
-        // GET: Events/Details/5
+        // event details
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null)
@@ -53,20 +45,20 @@ namespace EventEase.Controllers
             return View(@event);
         }
 
-        // GET: Events/Create
+        // create form
         public IActionResult Create()
         {
             return View();
         }
 
-        // POST: Events/Create
+        // create logic
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("EventId,EventName,Description,StartDate,EndDate")] Event @event)
         {
             if (ModelState.IsValid)
             {
-                // Handle image upload
+                // upload image if there is one
                 if (Request.Form.Files.Count > 0)
                 {
                     var file = Request.Form.Files[0];
@@ -86,7 +78,7 @@ namespace EventEase.Controllers
             return View(@event);
         }
 
-        // GET: Events/Edit/5
+        // edit form
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null)
@@ -102,7 +94,7 @@ namespace EventEase.Controllers
             return View(@event);
         }
 
-        // POST: Events/Edit/5
+        // edit logic
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, [Bind("EventId,EventName,Description,StartDate,EndDate")] Event @event)
@@ -114,7 +106,7 @@ namespace EventEase.Controllers
 
             if (ModelState.IsValid)
             {
-                // Handle image upload
+                // handle new image
                 if (Request.Form.Files.Count > 0)
                 {
                     var file = Request.Form.Files[0];
@@ -148,7 +140,7 @@ namespace EventEase.Controllers
             return View(@event);
         }
 
-        // GET: Events/Delete/5
+        // delete page
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null)
@@ -166,7 +158,7 @@ namespace EventEase.Controllers
             return View(@event);
         }
 
-        // POST: Events/Delete/5
+        // delete logic
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
@@ -177,7 +169,7 @@ namespace EventEase.Controllers
                 return NotFound();
             }
 
-            // Check if event has active bookings
+            // can't delete 
             bool hasBookings = await _context.Bookings.AnyAsync(b => b.EventId == id);
             if (hasBookings)
             {
@@ -188,6 +180,17 @@ namespace EventEase.Controllers
             _context.Events.Remove(@event);
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
+        }
+
+        // shows image from blob storage
+        public async Task<IActionResult> EventImage(string imageUrl)
+        {
+            var (stream, contentType) = await _blobStorageService.GetImageAsync(imageUrl);
+
+            if (stream == null)
+                return NotFound();
+
+            return File(stream, contentType ?? "image/jpeg");
         }
 
         private bool EventExists(int id)

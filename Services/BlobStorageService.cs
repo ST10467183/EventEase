@@ -43,5 +43,30 @@ namespace EventEase.Services
             BlobClient blobClient = containerClient.GetBlobClient(blobName);
             await blobClient.DeleteIfExistsAsync();
         }
+        public async Task<(Stream? fileStream, string? contentType)> GetImageAsync(string imageUrl)
+        {
+            if (string.IsNullOrEmpty(imageUrl))
+                return (null, null);
+
+            try
+            {
+                BlobServiceClient blobServiceClient = new BlobServiceClient(_connectionString);
+                BlobContainerClient containerClient = blobServiceClient.GetBlobContainerClient(ContainerName);
+
+                Uri uri = new Uri(imageUrl);
+                string blobName = Path.GetFileName(uri.LocalPath);
+                BlobClient blobClient = containerClient.GetBlobClient(blobName);
+
+                if (!await blobClient.ExistsAsync())
+                    return (null, null);
+
+                var response = await blobClient.DownloadAsync();
+                return (response.Value.Content, response.Value.Details.ContentType);
+            }
+            catch
+            {
+                return (null, null);
+            }
+        }
     }
 }

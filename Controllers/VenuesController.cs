@@ -22,13 +22,13 @@ namespace EventEase.Controllers
             _blobStorageService = blobStorageService;
         }
 
-        // GET: Venues
+        // shows all venues
         public async Task<IActionResult> Index()
         {
             return View(await _context.Venues.ToListAsync());
         }
 
-        // GET: Venues/Details/5
+        // details page
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null)
@@ -46,20 +46,20 @@ namespace EventEase.Controllers
             return View(venue);
         }
 
-        // GET: Venues/Create
+        // create form
         public IActionResult Create()
         {
             return View();
         }
 
-        // POST: Venues/Create
+        // create logic
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("VenueId,VenueName,Location,Capacity")] Venue venue)
         {
             if (ModelState.IsValid)
             {
-                // Handle image upload
+                // upload image if there is one
                 if (Request.Form.Files.Count > 0)
                 {
                     var file = Request.Form.Files[0];
@@ -79,7 +79,7 @@ namespace EventEase.Controllers
             return View(venue);
         }
 
-        // GET: Venues/Edit/5
+        // edit form
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null)
@@ -95,7 +95,7 @@ namespace EventEase.Controllers
             return View(venue);
         }
 
-        // POST: Venues/Edit/5
+        // edit logic
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, [Bind("VenueId,VenueName,Location,Capacity")] Venue venue)
@@ -107,7 +107,7 @@ namespace EventEase.Controllers
 
             if (ModelState.IsValid)
             {
-                // Handle image upload
+                // handle new image
                 if (Request.Form.Files.Count > 0)
                 {
                     var file = Request.Form.Files[0];
@@ -141,7 +141,7 @@ namespace EventEase.Controllers
             return View(venue);
         }
 
-        // GET: Venues/Delete/5
+        // delete page
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null)
@@ -159,7 +159,7 @@ namespace EventEase.Controllers
             return View(venue);
         }
 
-        // POST: Venues/Delete/5
+        // delete logic
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
@@ -170,7 +170,7 @@ namespace EventEase.Controllers
                 return NotFound();
             }
 
-            // Check if venue has active bookings
+            // can't delete if there's bookings
             bool hasBookings = await _context.Bookings.AnyAsync(b => b.VenueId == id);
             if (hasBookings)
             {
@@ -181,6 +181,17 @@ namespace EventEase.Controllers
             _context.Venues.Remove(venue);
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
+        }
+
+        // shows image from blob storage
+        public async Task<IActionResult> VenueImage(string imageUrl)
+        {
+            var (stream, contentType) = await _blobStorageService.GetImageAsync(imageUrl);
+
+            if (stream == null)
+                return NotFound();
+
+            return File(stream, contentType ?? "image/jpeg");
         }
 
         private bool VenueExists(int id)
