@@ -71,9 +71,16 @@ namespace EventEase.Controllers
                     }
                 }
 
-                _context.Add(@event);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
+                try
+                {
+                    _context.Add(@event);
+                    await _context.SaveChangesAsync();
+                    return RedirectToAction(nameof(Index));
+                }
+                catch (DbUpdateException)
+                {
+                    TempData["ErrorMessage"] = "Unable to create event. Please check your input and try again.";
+                }
             }
             return View(@event);
         }
@@ -135,6 +142,11 @@ namespace EventEase.Controllers
                         throw;
                     }
                 }
+                catch (DbUpdateException)
+                {
+                    TempData["ErrorMessage"] = "Unable to save changes. Please try again.";
+                    return RedirectToAction(nameof(Index));
+                }
                 return RedirectToAction(nameof(Index));
             }
             return View(@event);
@@ -169,7 +181,7 @@ namespace EventEase.Controllers
                 return NotFound();
             }
 
-            // can't delete 
+            // can't delete if there's bookings
             bool hasBookings = await _context.Bookings.AnyAsync(b => b.EventId == id);
             if (hasBookings)
             {
@@ -177,8 +189,16 @@ namespace EventEase.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            _context.Events.Remove(@event);
-            await _context.SaveChangesAsync();
+            try
+            {
+                _context.Events.Remove(@event);
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException)
+            {
+                TempData["ErrorMessage"] = "Unable to delete the event. Please try again later.";
+            }
+
             return RedirectToAction(nameof(Index));
         }
 

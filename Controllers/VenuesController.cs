@@ -72,9 +72,16 @@ namespace EventEase.Controllers
                     }
                 }
 
-                _context.Add(venue);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
+                try
+                {
+                    _context.Add(venue);
+                    await _context.SaveChangesAsync();
+                    return RedirectToAction(nameof(Index));
+                }
+                catch (DbUpdateException)
+                {
+                    TempData["ErrorMessage"] = "Unable to create venue. Please check your input and try again.";
+                }
             }
             return View(venue);
         }
@@ -136,6 +143,11 @@ namespace EventEase.Controllers
                         throw;
                     }
                 }
+                catch (DbUpdateException)
+                {
+                    TempData["ErrorMessage"] = "Unable to save changes. Please try again.";
+                    return RedirectToAction(nameof(Index));
+                }
                 return RedirectToAction(nameof(Index));
             }
             return View(venue);
@@ -178,8 +190,16 @@ namespace EventEase.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            _context.Venues.Remove(venue);
-            await _context.SaveChangesAsync();
+            try
+            {
+                _context.Venues.Remove(venue);
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException)
+            {
+                TempData["ErrorMessage"] = "Unable to delete the venue. Please try again later.";
+            }
+
             return RedirectToAction(nameof(Index));
         }
 

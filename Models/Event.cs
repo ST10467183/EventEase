@@ -23,6 +23,7 @@ namespace EventEase.Models
         [Required]
         [Display(Name = "End Date")]
         [DataType(DataType.DateTime)]
+        [DateGreaterThan("StartDate", ErrorMessage = "End date must be later than start date.")]
         public DateTime EndDate { get; set; }
 
         [Display(Name = "Event Image URL")]
